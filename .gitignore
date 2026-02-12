@@ -1,0 +1,56 @@
+# 虚拟环境
+venv/
+env/
+*.venv/
+
+# Python编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE相关文件
+.vscode/
+.idea/
+.trae/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 临时文件和目录
+tmp/
+temp/
+
+# ASR和TTS模型文件
+ASR/models/
+TTS/models/
+
+# 音频和视频文件
+*.wav
+*.mp3
+*.mp4
+*.avi
+
+# 大型数据文件
+*.zip
+*.tar.gz
+*.7z
+
+# 操作系统文件
+Thumbs.db
+.DS_Store
+
+# 测试生成的文件
+test_output/
+output.wav
+
+# 安装脚本生成的文件
+install.log

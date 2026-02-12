@@ -1,7 +1,28 @@
 import os
 import sys
+import subprocess
 from typing import List, Optional
 from NLP.LLM import LLMInterface, AgentManager
+
+
+def is_in_venv():
+    """检查是否在虚拟环境中"""
+    return hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix
+
+
+def get_venv_python(venv_name="venv"):
+    """获取虚拟环境中的Python路径"""
+    venv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), venv_name)
+    if os.name == 'nt':  # Windows
+        return os.path.join(venv_path, "Scripts", "python.exe")
+    else:  # Linux/Mac
+        return os.path.join(venv_path, "bin", "python")
+
+
+def venv_exists(venv_name="venv"):
+    """检查虚拟环境是否存在"""
+    venv_python = get_venv_python(venv_name)
+    return os.path.exists(venv_python)
 
 class ANT:
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
@@ -95,8 +116,40 @@ class ANT:
         self.llm.clear_history()
         print("Conversation history cleared")
 
-if __name__ == "__main__":
-    """示例用法"""
+def main():
+    """主函数"""
+    import argparse
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description="ANT 智能体系统")
+    parser.add_argument("--no-venv", action="store_true", help="强制不使用虚拟环境")
+    parser.add_argument("--venv-name", default="venv", help="虚拟环境名称 (默认: venv)")
+    args = parser.parse_args()
+    
+    # 检查是否在虚拟环境中
+    in_venv = is_in_venv()
+    
+    # 如果不在虚拟环境中，且没有强制不使用虚拟环境，且虚拟环境存在
+    if not in_venv and not args.no_venv and venv_exists(args.venv_name):
+        venv_python = get_venv_python(args.venv_name)
+        print(f"检测到虚拟环境，将在虚拟环境中运行 ANT 智能体系统...")
+        print(f"虚拟环境路径: {venv_python}")
+        
+        # 重新在虚拟环境中运行自身
+        subprocess.run([venv_python] + sys.argv, check=False)
+        return
+    
+    # 如果不在虚拟环境中，且虚拟环境不存在
+    if not in_venv and not args.no_venv and not venv_exists(args.venv_name):
+        print("未检测到虚拟环境，将在当前环境运行 ANT 智能体系统")
+        print("提示: 建议使用虚拟环境运行，可通过以下命令创建:")
+        print("  python install.py")
+    
+    # 如果在虚拟环境中
+    if in_venv:
+        print(f"在虚拟环境中运行 ANT 智能体系统")
+        print(f"虚拟环境路径: {sys.prefix}")
+    
     # 从环境变量获取API密钥
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_BASE_URL")
@@ -132,3 +185,7 @@ if __name__ == "__main__":
     print("\nAgent set to: professional")
     response = ant.chat("Explain quantum computing in simple terms.")
     print(f"Response: {response}")
+
+
+if __name__ == "__main__":
+    main()

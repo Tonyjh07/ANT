@@ -35,9 +35,10 @@ def check_python_version():
     return version
 
 
-def install_package(package, extra_index_url=None):
+def install_package(package, python_path=None, extra_index_url=None):
     """安装单个包，支持优雅降级"""
-    cmd = [sys.executable, "-m", "pip", "install", "-U"]
+    python = python_path or sys.executable
+    cmd = [python, "-m", "pip", "install", "-U"]
     if extra_index_url:
         cmd.extend(["--extra-index-url", extra_index_url])
     cmd.append(package)
@@ -47,20 +48,47 @@ def install_package(package, extra_index_url=None):
     return result.returncode == 0 if hasattr(result, 'returncode') else False
 
 
-def install_optional_package(package, fallback=None):
+def install_optional_package(package, python_path=None, fallback=None):
     """安装可选包，失败时尝试降级"""
     print(f"尝试安装可选包: {package}")
-    if install_package(package):
+    if install_package(package, python_path):
         print(f"✓ {package} 安装成功")
         return True
     else:
         if fallback:
             print(f"尝试降级安装: {fallback}")
-            if install_package(fallback):
+            if install_package(fallback, python_path):
                 print(f"✓ {fallback} 安装成功")
                 return True
         print(f"✗ {package} 安装失败，将跳过此包")
         return False
+
+
+def create_venv(venv_name="venv"):
+    """创建虚拟环境"""
+    venv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), venv_name)
+    
+    if os.path.exists(venv_path):
+        print(f"虚拟环境已存在: {venv_path}")
+        return venv_path
+    
+    print(f"创建虚拟环境: {venv_path}")
+    result = run_command([sys.executable, "-m", "venv", venv_path], shell=False)
+    
+    if result.returncode == 0:
+        print(f"✓ 虚拟环境创建成功: {venv_path}")
+        return venv_path
+    else:
+        print(f"✗ 虚拟环境创建失败")
+        return None
+
+
+def get_venv_python(venv_path):
+    """获取虚拟环境中的Python路径"""
+    if platform.system() == "Windows":
+        return os.path.join(venv_path, "Scripts", "python.exe")
+    else:
+        return os.path.join(venv_path, "bin", "python")
 
 
 def main():
@@ -70,42 +98,64 @@ def main():
     parser.add_argument("--only-asr", action="store_true", help="仅安装 ASR 相关依赖")
     parser.add_argument("--only-tts", action="store_true", help="仅安装 TTS 相关依赖")
     parser.add_argument("--only-nlp", action="store_true", help="仅安装 NLP 相关依赖")
+    parser.add_argument("--no-venv", action="store_true", help="不使用虚拟环境")
+    parser.add_argument("--venv-name", default="venv", help="虚拟环境名称 (默认: venv)")
     args = parser.parse_args()
 
     print("=== ANT 项目安装脚本 ===")
     print(f"系统: {platform.system()} {platform.release()}")
     check_python_version()
 
+    # 创建虚拟环境
+    if not args.no_venv:
+        print("\n0. 创建虚拟环境")
+        venv_path = create_venv(args.venv_name)
+        if venv_path:
+            venv_python = get_venv_python(venv_path)
+            print(f"虚拟环境Python路径: {venv_python}")
+            print("\n请先激活虚拟环境:")
+            if platform.system() == "Windows":
+                print(f"  {args.venv_name}\\Scripts\\activate")
+            else:
+                print(f"  source {args.venv_name}/bin/activate")
+            print("然后重新运行此脚本: python install.py --no-venv")
+            return
+        else:
+            print("虚拟环境创建失败，继续在当前环境安装")
+            venv_python = sys.executable
+    else:
+        venv_python = sys.executable
+
     # 升级 pip
     print("\n1. 升级 pip")
-    install_package("pip")
+    install_package("pip", venv_python)
 
     # 安装必要依赖
     print("\n2. 安装必要依赖")
     base_packages = ["numpy", "torch", "transformers"]
     for pkg in base_packages:
-        install_package(pkg)
+        install_package(pkg, venv_python)
 
     # 安装 ASR 相关依赖
     if not args.only_tts and not args.only_nlp:
         print("\n3. 安装 ASR 相关依赖")
-        install_package("qwen-asr")
+        install_package("qwen-asr", venv_python)
         if not args.no_optional:
-            install_package("qwen-asr[vllm]")
-            install_optional_package("flash-attn --no-build-isolation")
+            install_package("qwen-asr[vllm]", venv_python)
+            install_optional_package("flash-attn --no-build-isolation", venv_python)
 
     # 安装 TTS 相关依赖
     if not args.only_asr and not args.only_nlp:
         print("\n4. 安装 TTS 相关依赖")
-        install_package("qwen-tts")
+        install_package("qwen-tts", venv_python)
         if not args.no_optional:
-            install_optional_package("flash-attn --no-build-isolation")
+            install_optional_package("flash-attn --no-build-isolation", venv_python)
 
     # 安装 NLP 相关依赖
     if not args.only_asr and not args.only_tts:
         print("\n5. 安装 NLP 相关依赖")
-        install_package("openai")
-        install_package("transformers")
+        install_package("openai", venv_python)
+        install_package("transformers", venv_python)
 
     # 验证安装
     print("\n6. 验证安装结果")
@@ -118,7 +168,7 @@ def main():
         packages_to_check.extend(["openai", "transformers"])
 
     for pkg in packages_to_check:
-        result = run_command([sys.executable, "-m", "pip", "show", pkg], shell=False)
+        result = run_command([venv_python, "-m", "pip", "show", pkg], shell=False)
         if result.returncode == 0:
             print(f"✓ {pkg} 已安装")
         else:
