@@ -1,0 +1,21 @@
+# 基本依赖
+numpy
+torch
+transformers
+
+# ASR 相关依赖
+qwen-asr
+# qwen-asr[vllm]  # 可选：使用vllm加速
+
+# TTS 相关依赖
+qwen-tts
+
+# NLP 相关依赖
+openai
+python-dotenv
+
+# 其他必要依赖
+soundfile
+
+# 可选优化依赖
+# flash-attn --no-build-isolation  # 可选：使用Flash Attention加速

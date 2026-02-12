@@ -91,6 +91,11 @@ def get_venv_python(venv_path):
         return os.path.join(venv_path, "bin", "python")
 
 
+def is_in_venv():
+    """检查是否在虚拟环境中"""
+    return hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix
+
+
 def main():
     """主安装函数"""
     parser = ArgumentParser(description="ANT 项目安装脚本")
@@ -106,25 +111,31 @@ def main():
     print(f"系统: {platform.system()} {platform.release()}")
     check_python_version()
 
-    # 创建虚拟环境
-    if not args.no_venv:
-        print("\n0. 创建虚拟环境")
-        venv_path = create_venv(args.venv_name)
-        if venv_path:
-            venv_python = get_venv_python(venv_path)
-            print(f"虚拟环境Python路径: {venv_python}")
-            print("\n请先激活虚拟环境:")
-            if platform.system() == "Windows":
-                print(f"  {args.venv_name}\\Scripts\\activate")
-            else:
-                print(f"  source {args.venv_name}/bin/activate")
-            print("然后重新运行此脚本: python install.py --no-venv")
-            return
-        else:
-            print("虚拟环境创建失败，继续在当前环境安装")
-            venv_python = sys.executable
-    else:
+    # 检查是否在虚拟环境中
+    in_venv = is_in_venv()
+    if in_venv:
+        print("\n在虚拟环境中运行，将直接安装依赖")
         venv_python = sys.executable
+    else:
+        # 创建虚拟环境
+        if not args.no_venv:
+            print("\n0. 创建虚拟环境")
+            venv_path = create_venv(args.venv_name)
+            if venv_path:
+                venv_python = get_venv_python(venv_path)
+                print(f"虚拟环境Python路径: {venv_python}")
+                print("\n请先激活虚拟环境:")
+                if platform.system() == "Windows":
+                    print(f"  {args.venv_name}\\Scripts\\activate")
+                else:
+                    print(f"  source {args.venv_name}/bin/activate")
+                print("然后重新运行此脚本")
+                return
+            else:
+                print("虚拟环境创建失败，继续在当前环境安装")
+                venv_python = sys.executable
+        else:
+            venv_python = sys.executable
 
     # 升级 pip
     print("\n1. 升级 pip")
@@ -156,6 +167,12 @@ def main():
         print("\n5. 安装 NLP 相关依赖")
         install_package("openai", venv_python)
         install_package("transformers", venv_python)
+        install_package("python-dotenv", venv_python)
+
+    # 安装其他必要依赖
+    print("\n6. 安装其他必要依赖")
+    install_package("python-dotenv", venv_python)
+    install_package("soundfile", venv_python)
 
     # 验证安装
     print("\n6. 验证安装结果")

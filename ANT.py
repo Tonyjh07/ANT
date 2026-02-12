@@ -4,6 +4,14 @@ import subprocess
 from typing import List, Optional
 from NLP.LLM import LLMInterface, AgentManager
 
+# 尝试加载环境变量文件
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("警告: python-dotenv 未安装，将使用系统环境变量")
+
+
 
 def is_in_venv():
     """检查是否在虚拟环境中"""
