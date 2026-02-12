@@ -7,6 +7,9 @@ class LLMInterface:
         """初始化LLM接口"""
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        self.temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "500"))
         
         if not self.api_key:
             raise ValueError("API key is required. Please set OPENAI_API_KEY environment variable.")
@@ -17,7 +20,7 @@ class LLMInterface:
         )
         
         self.conversation_history: List[Dict[str, str]] = []
-        self.system_prompt = "You are a helpful assistant."
+        self.system_prompt = os.getenv("SYSTEM_PROMPT", "你是一个有帮助的助手。使用中文回答。")
     
     def set_system_prompt(self, prompt: str):
         """设置系统提示词"""
@@ -29,7 +32,7 @@ class LLMInterface:
         """添加消息到对话历史"""
         self.conversation_history.append({"role": role, "content": content})
     
-    def generate_response(self, user_input: str, model: str = "gpt-3.5-turbo", temperature: float = 0.7, max_tokens: int = 500) -> str:
+    def generate_response(self, user_input: str, model: Optional[str] = None, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> str:
         """生成响应"""
         # 确保系统提示词在对话历史的开头
         if not self.conversation_history or self.conversation_history[0]["role"] != "system":
@@ -37,6 +40,11 @@ class LLMInterface:
         
         # 添加用户输入
         self.add_message("user", user_input)
+        
+        # 使用环境变量中的默认值
+        model = model or self.model
+        temperature = temperature or self.temperature
+        max_tokens = max_tokens or self.max_tokens
         
         try:
             response = self.client.chat.completions.create(
@@ -69,7 +77,7 @@ class AgentManager:
         self.llm = llm_interface
         self.agents = {
             "default": {
-                "system_prompt": "你是一个有帮助的助手。使用中文回答。",
+                "system_prompt": os.getenv("SYSTEM_PROMPT", "你是一个有帮助的助手。使用中文回答。"),
                 "voice": "default"
             }
         }
