@@ -1,0 +1,8 @@
+[submodule "ASR"]
+	path = ASR
+	url = https://github.com/QwenLM/Qwen3-ASR.git
+	branch = main
+[submodule "TTS"]
+	path = TTS
+	url = https://github.com/QwenLM/Qwen3-TTS.git
+	branch = main
